@@ -23,10 +23,7 @@
 - [ ] build walls and ramparts around exits
 - [ ] make creeps explore rooms not in `RoomsMemory` when they have nothing else to do
 - [ ] make creeps harvest from explored rooms if closer ones are blocked off
-
-# Symtoms of Naive Design
-- Runtime errors when contents of `Memory` no longer compatible with updated script.
-- Creeps (and other stuff) being abandoned when script is reset.
+- [ ] delete dead creep memory
 
 # Unorganised Notes
 - if designed naively, will break when:
