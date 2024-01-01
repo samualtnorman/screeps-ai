@@ -133,18 +133,18 @@ export const loop = () => {
 
 				if (source)
 					harvest(creep, source)
-				// else if (!creep.fatigue) {
-				// 	for (const [ exit, room ] of Object.entries(Game.map.describeExits(creep.room.name))) {
-				// 		if (!(room in roomsMemory)) {
-				// 			const position = creep.pos.findClosestByPath(Number(exit) as 1 | 3 | 5 | 7)
+				else if (!creep.fatigue) {
+					for (const [ exit, room ] of Object.entries(Game.map.describeExits(creep.room.name))) {
+						if (!(room in roomsMemory)) {
+							const position = creep.pos.findClosestByPath(Number(exit) as 1 | 3 | 5 | 7)
 
-				// 			if (position) {
-				// 				assertOk(creep.moveTo(position, { visualizePathStyle: { stroke: `yellow` } }), HERE)
-				// 				break
-				// 			}
-				// 		}
-				// 	}
-				// }
+							if (position && !position.lookFor(LOOK_STRUCTURES).length) {
+								assertOk(creep.moveTo(position, { visualizePathStyle: { stroke: `yellow` } }), HERE)
+								break
+							}
+						}
+					}
+				}
 			} else if (!creep.store.getFreeCapacity()) {
 				// storage is full
 				const [ spawn ] = creep.room.find(FIND_MY_SPAWNS)
