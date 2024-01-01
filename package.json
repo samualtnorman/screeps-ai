@@ -3,13 +3,16 @@
 	"type": "module",
 	"dependencies": {
 		"@samual/lib": "^0.9.0",
+		"screeps-cartographer": "^1.8.9",
 		"valibot": "^0.25.0"
 	},
 	"devDependencies": {
 		"@babel/preset-env": "^7.23.6",
 		"@babel/preset-typescript": "^7.23.3",
 		"@rollup/plugin-babel": "^6.0.4",
+		"@rollup/plugin-commonjs": "^25.0.7",
 		"@rollup/plugin-node-resolve": "^15.2.3",
+		"@total-typescript/ts-reset": "^0.5.1",
 		"@types/node": "^20.10.5",
 		"@types/screeps": "^3.3.7",
 		"babel-plugin-here": "^0.0.1",

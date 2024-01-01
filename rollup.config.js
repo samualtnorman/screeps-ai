@@ -2,6 +2,7 @@
 import babelPresetEnv from "@babel/preset-env"
 import babelPresetTypescript from "@babel/preset-typescript"
 import { babel } from "@rollup/plugin-babel"
+import commonjs from "@rollup/plugin-commonjs"
 import { nodeResolve } from "@rollup/plugin-node-resolve"
 import babelPluginHere from "babel-plugin-here"
 
@@ -13,6 +14,7 @@ const MINIFY = false
 	strictDeprecations: true,
 	plugins: [
 		nodeResolve({ extensions: [ ".ts" ] }),
+		commonjs(),
 		babel({
 			babelHelpers: "bundled",
 			extensions: [ ".ts", ".js" ],
