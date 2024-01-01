@@ -21,12 +21,50 @@ const RoomsMemory = makeMemoryOptions({
 
 console.log(`Started`)
 
-const assertCode = (status: number, statuses: number[], message: string) => assert(statuses.includes(status), `Got: ${status}, ${message}`)
+const assertCode = (status: number, statuses: number[], message: string) =>
+	assert(statuses.includes(status), `Got: ${status}, ${message}`)
+
 const assertOk = (value: number, message: string) => assert(value == OK, `Got: ${value}, ${message}`)
 
 let ticksAlive = 0
 
 const roomsMemory = getMemory(RoomsMemory)
+
+for (const spawn of Object.values(Game.spawns)) {
+	catchAndReport(() => {
+		// for (const site of spawn.room.find(FIND_CONSTRUCTION_SITES)) {
+		// 	if (!site.progress)
+		// 		assertOk(site.remove(), HERE)
+		// }
+
+		// TODO detect new spawn creations and run the following for those
+		for (const source of spawn.room.find(FIND_SOURCES)) {
+			for (const step of
+				source.pos.findPathTo(spawn, { ignoreCreeps: true, ignoreRoads: true, swampCost: 1, range: 1 })
+			) {
+				if (spawn.room.lookAt(step.x, step.y)
+					.every(item => item.type != LOOK_CONSTRUCTION_SITES && item.type != LOOK_STRUCTURES)
+				) {
+					assertOk(
+						spawn.room.createConstructionSite(step.x, step.y, STRUCTURE_ROAD), `${HERE} ${step.x} ${step.y}`
+					)
+				}
+			}
+
+			if (spawn.room.controller) {
+				for (const step of source.pos.findPathTo(
+					spawn.room.controller,
+					{ ignoreCreeps: true, ignoreRoads: true, swampCost: 1, range: 1 }
+				)) {
+					if (spawn.room.lookAt(step.x, step.y)
+						.every(item => item.type != LOOK_CONSTRUCTION_SITES && item.type != LOOK_STRUCTURES)
+					)
+						assertOk(spawn.room.createConstructionSite(step.x, step.y, STRUCTURE_ROAD), HERE)
+				}
+			}
+		}
+	})
+}
 
 export const loop = () => {
 	ticksAlive++
@@ -44,8 +82,8 @@ export const loop = () => {
 	const creeps = Object.values(Game.creeps)
 
 	for (const spawn of Object.values(Game.spawns)) {
-		try {
-			if (creeps.length < 8) {
+		catchAndReport(() => {
+			if (creeps.length < 10) {
 				assertCode(
 					spawn.spawnCreep([ WORK, CARRY, MOVE ], Math.floor(Math.random() * (2 ** 52)).toString(36)),
 					[ OK, ERR_NOT_ENOUGH_ENERGY, ERR_BUSY ],
@@ -53,34 +91,41 @@ export const loop = () => {
 				)
 			}
 
-			// for (const site of spawn.room.find(FIND_CONSTRUCTION_SITES)) {
-			// 	if (!site.progress)
-			// 		assertOk(site.remove(), HERE)
+			// if (spawn.room.controller) {
+			// 	const steps = spawn.pos.findPathTo(
+			// 		spawn.room.controller,
+			// 		{ ignoreCreeps: true, ignoreRoads: true, swampCost: 1, range: 1 }
+			// 	)
+
+			// 	for (const step of spawn.pos.findPathTo(
+			// 		spawn.room.controller,
+			// 		{
+			// 			ignoreCreeps: true,
+			// 			ignoreRoads: true,
+			// 			swampCost: 1,
+			// 			range: 1,
+			// 			costCallback: (room, cost) => {
+			// 				if (room == spawn.room.name) {
+			// 					for (const step of steps)
+			// 						cost.set(step.x, step.y, 255)
+			// 				}
+			// 			}
+			// 		}
+			// 	)) {
+			// 		if (spawn.room.lookAt(step.x, step.y)
+			// 			.every(item => item.type != LOOK_CONSTRUCTION_SITES && item.type != LOOK_STRUCTURES)
+			// 		)
+			// 			spawn.room.visual.circle(step.x, step.y)
+			// 			// assertOk(spawn.room.createConstructionSite(step.x, step.y, STRUCTURE_ROAD), HERE)
+			// 	}
 			// }
-
-			// once I implement an OS, I can have a process that does this work once on start up and when new rooms have spawns placed in them
-			for (const source of spawn.room.find(FIND_SOURCES)) {
-				for (const step of source.pos.findPathTo(spawn, { ignoreCreeps: true, ignoreRoads: true, swampCost: 1, range: 1 })) {
-					if (spawn.room.lookAt(step.x, step.y).every(item => item.type != LOOK_CONSTRUCTION_SITES && item.type != LOOK_STRUCTURES))
-						assertOk(spawn.room.createConstructionSite(step.x, step.y, STRUCTURE_ROAD), `${HERE} ${step.x} ${step.y}`)
-				}
-
-				if (spawn.room.controller) {
-					for (const step of source.pos.findPathTo(spawn.room.controller, { ignoreCreeps: true, ignoreRoads: true, swampCost: 1, range: 1 })) {
-						if (spawn.room.lookAt(step.x, step.y).every(item => item.type != LOOK_CONSTRUCTION_SITES && item.type != LOOK_STRUCTURES))
-							assertOk(spawn.room.createConstructionSite(step.x, step.y, STRUCTURE_ROAD), HERE)
-					}
-				}
-			}
-		} catch (error) {
-			console.log(`Caught`, (error as any)?.stack)
-		}
+		})
 	}
 
 	for (const creep of creeps) {
-		try {
+		catchAndReport(() => {
 			if (creep.spawning)
-				continue
+				return
 
 			if (!creep.store.getUsedCapacity()) {
 				// storage is empty
@@ -88,9 +133,18 @@ export const loop = () => {
 
 				if (source)
 					harvest(creep, source)
-				else {
-					creep.room
-				}
+				// else if (!creep.fatigue) {
+				// 	for (const [ exit, room ] of Object.entries(Game.map.describeExits(creep.room.name))) {
+				// 		if (!(room in roomsMemory)) {
+				// 			const position = creep.pos.findClosestByPath(Number(exit) as 1 | 3 | 5 | 7)
+
+				// 			if (position) {
+				// 				assertOk(creep.moveTo(position, { visualizePathStyle: { stroke: `yellow` } }), HERE)
+				// 				break
+				// 			}
+				// 		}
+				// 	}
+				// }
 			} else if (!creep.store.getFreeCapacity()) {
 				// storage is full
 				const [ spawn ] = creep.room.find(FIND_MY_SPAWNS)
@@ -142,9 +196,7 @@ export const loop = () => {
 					}
 				}
 			}
-		} catch (error) {
-			console.log(`Caught`, (error as any)?.stack)
-		}
+		})
 	}
 
 	if (Game.cpu.bucket == 10000) {
@@ -170,7 +222,21 @@ function transfer(creep: Creep, target: AnyCreep | Structure, resourceType: Reso
 	if (code != OK) {
 		assertCode(code, [ ERR_NOT_IN_RANGE ], HERE)
 
-		if (!creep.fatigue)
+		// TODO iterate through creeps sorted by closest up to self to find targets transfer to
+		const otherCreep = target.pos.findClosestByPath([ creep, ...creep.pos.findInRange(FIND_MY_CREEPS, 1) ])
+
+		// if creep is able to get rid of all energy, do not move towards target
+		// if creep is not, move towards
+
+		if (otherCreep && otherCreep.id != creep.id && otherCreep.store.getFreeCapacity()) {
+			assertOk(creep.transfer(otherCreep, RESOURCE_ENERGY), HERE)
+
+			if (!otherCreep.store.getUsedCapacity())
+				otherCreep.cancelOrder(`move`)
+
+			if (!creep.fatigue && otherCreep.store.getFreeCapacity() < creep.store.energy)
+				assertOk(creep.moveTo(target, { visualizePathStyle: { stroke: `green` }, range: 1 }), HERE)
+		} else if (!creep.fatigue)
 			assertOk(creep.moveTo(target, { visualizePathStyle: { stroke: `green` }, range: 1 }), HERE)
 	}
 }
@@ -183,5 +249,14 @@ function harvest(creep: Creep, target: Source | Mineral | Deposit) {
 
 		if (!creep.fatigue)
 			assertOk(creep.moveTo(target, { visualizePathStyle: { stroke: `blue` }, range: 1 }), HERE)
+	}
+}
+
+function catchAndReport(callback: () => void) {
+	try {
+		callback()
+	} catch (error) {
+		console.log(`Caught`, (error as any)?.stack)
+		Game.notify(`Caught ${(error as any)?.stack}`)
 	}
 }

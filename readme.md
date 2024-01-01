@@ -16,7 +16,7 @@
 - [bonzAI](https://github.com/bonzaiferroni/bonzAI) - last updated in 2017
 
 # Todo
-- [ ] send emails instead of just logging caught errors
+- [x] send emails instead of just logging caught errors
 - [ ] create paths to exits
 - [ ] os
 - [ ] create path to mineral
@@ -24,6 +24,12 @@
 - [ ] make creeps explore rooms not in `RoomsMemory` when they have nothing else to do
 - [ ] make creeps harvest from explored rooms if closer ones are blocked off
 - [ ] delete dead creep memory
+- [ ] a creep that can walk just as efficiently on road as not on road should probably ignore roads
+- [ ] and to go further, a creep that can walk just as efficiently on swamps (due to lots of `MOVE`s) should ignore swamps
+
+# Symtoms of Naive Design
+- Runtime errors when contents of `Memory` no longer compatible with updated script.
+- Creeps (and other stuff) being abandoned when script is reset.
 
 # Unorganised Notes
 - if designed naively, will break when:
