@@ -25,6 +25,10 @@
 - [x] make creeps harvest from explored rooms if closer ones are blocked off
 - [x] delete dead creep memory
 - [ ] find hottest lines
+- [ ] loot graves and pickup energy
+
+# Bugs
+- [ ] creeps might be just sitting on the edge of a room without actually leaving
 
 # Symtoms of Naive Design
 - Runtime errors when contents of `Memory` no longer compatible with updated script.

@@ -211,19 +211,25 @@ export const loop = () => {
 							.map(([ room, { sources } ]) => sources.map(({ x, y }) => new RoomPosition(x, y, room)))
 							.flat()
 
-						if (sources.length)
-							assertOk(moveTo(creep, sources, { visualizePathStyle: { stroke: `#f99e2d` } }), HERE)
-						else {
-							for (const [ exit, room ] of Object.entries(Game.map.describeExits(creep.room.name))) {
-								if (!(room in roomsMemory)) {
-									const position = creep.pos.findClosestByPath(Number(exit) as 1 | 3 | 5 | 7)
+						const code = sources.length ? moveTo(creep, sources, { visualizePathStyle: { stroke: `#f99e2d` } }) : undefined
 
-									if (position && !position.lookFor(LOOK_STRUCTURES).length) {
-										assertOk(moveTo(creep, position, { visualizePathStyle: { stroke: `yellow` } }), HERE)
-										break
-									}
-								}
-							}
+						if (code != OK) {
+							if (code != undefined)
+								assertCode(code, [ ERR_NO_PATH ], HERE)
+
+							// for (const [ exit, room ] of Object.entries(Game.map.describeExits(creep.room.name))) {
+							// 	if (!(room in roomsMemory)) {
+							// 		const position = creep.pos.findClosestByPath(Number(exit) as 1 | 3 | 5 | 7)
+
+							// 		if (position && !position.lookFor(LOOK_STRUCTURES).length) {
+							// 			assertOk(creep.moveTo(
+							// 				position,
+							// 				{ visualizePathStyle: { stroke: `yellow` } }
+							// 			), HERE)
+							// 			break
+							// 		}
+							// 	}
+							// }
 						}
 					}
 				} else if (!creep.store.getFreeCapacity()) {
@@ -232,8 +238,9 @@ export const loop = () => {
 					// otherwise move towards target in another room
 					const target = creep.pos.findClosestByPath([
 						...creep.room.find(FIND_CONSTRUCTION_SITES),
-						...creep.room.find(FIND_MY_SPAWNS).filter(spawn => spawn.store.getFreeCapacity()),
-						...creep.room.controller ? [ creep.room.controller ] : []
+						...creep.room.find(FIND_MY_SPAWNS)
+							.filter(({ store }) => store.getFreeCapacity(RESOURCE_ENERGY)),
+						...creep.room.controller?.my ? [ creep.room.controller ] : []
 					], { range: 1 })
 
 					if (target) {
@@ -244,25 +251,23 @@ export const loop = () => {
 					} else if (!creep.fatigue) {
 						const spawns = Object.values(Game.spawns)
 
-						assertOk(
-							moveTo(
-								creep,
-								[
-									...Object.values(Game.constructionSites),
-									...spawns.filter(spawn => spawn.store.getFreeCapacity()),
-									...spawns.map(spawn => spawn.room.controller).filter(Boolean)
-								].filter(({ room }) => room && room.name != creep.room.name).map(({ pos }) => pos),
-								{ visualizePathStyle: { stroke: `purple` } }
-							),
-							HERE
-						)
+						assertOk(moveTo(
+							creep,
+							[
+								...Object.values(Game.constructionSites),
+								...spawns.filter(spawn => spawn.store.getFreeCapacity(RESOURCE_ENERGY)),
+								...spawns.map(spawn => spawn.room.controller).filter(Boolean)
+							].filter(({ room }) => room && room.name != creep.room.name).map(({ pos }) => pos),
+							{ visualizePathStyle: { stroke: `purple` } }
+						), HERE)
 					}
 				} else {
 					const target = creep.pos.findClosestByPath([
 						...creep.room.find(FIND_SOURCES),
 						...creep.room.find(FIND_CONSTRUCTION_SITES),
-						...creep.room.find(FIND_MY_SPAWNS).filter(spawn => spawn.store.getFreeCapacity()),
-						...creep.room.controller ? [ creep.room.controller ] : []
+						...creep.room.find(FIND_MY_SPAWNS)
+							.filter(({ store }) => store.getFreeCapacity(RESOURCE_ENERGY)),
+						...creep.room.controller?.my ? [ creep.room.controller ] : []
 					], { range: 1 })
 
 					if (target) {
@@ -285,7 +290,7 @@ export const loop = () => {
 								creep,
 								[
 									...Object.values(Game.constructionSites),
-									...spawns.filter(spawn => spawn.store.getFreeCapacity()),
+									...spawns.filter(spawn => spawn.store.getFreeCapacity(RESOURCE_ENERGY)),
 									...spawns.map(spawn => spawn.room.controller).filter(Boolean)
 								].filter(({ room }) => room && room.name != creep.room.name).map(({ pos }) => pos),
 								{ visualizePathStyle: { stroke: `#975cea` } }
@@ -364,11 +369,11 @@ function catchAndReport(callback: () => void) {
 	}
 }
 
-function measureCpu(name: string, callback: () => void) {
+function measureCpu<T>(name: string, callback: () => T): T {
 	const cpu = Game.cpu.getUsed()
 
 	try {
-		callback()
+		return callback()
 	} finally {
 		console.log(name, Game.cpu.getUsed() - cpu)
 	}
