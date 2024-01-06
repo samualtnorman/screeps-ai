@@ -21,8 +21,7 @@ export function measureCpu(name: string): void {
 	cpuUsage = newCpuUsage
 }
 
-Object.defineProperty(global, `profile`, {
-	get() {
-		return [ ...profiles ].sort(([ , a ], [ , b ]) => b - a).map(([ name, cpu ]) => `${name}: ${cpu}`).join(`\n`)
-	}
-})
+export const getProfileString =
+	() => [ ...profiles ].sort(([, a], [, b]) => b - a).map(([name, cpu]) => `${name}: ${cpu}`).join(`\n`)
+
+Object.defineProperty(global, `profile`, { get: getProfileString })

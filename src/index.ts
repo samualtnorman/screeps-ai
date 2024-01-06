@@ -2,7 +2,7 @@ import { assert } from "@samual/lib/assert"
 import "@total-typescript/ts-reset"
 import { MoveTarget, moveTo, preTick, reconcileTraffic } from "screeps-cartographer"
 import * as v from "valibot"
-import { measureCpu, prepareMeasureCpu } from "./measureCpu"
+import { getProfileString, measureCpu, prepareMeasureCpu } from "./measureCpu"
 
 type MemoryOptions<T extends v.BaseSchema> = { name: string, schema: T }
 
@@ -418,6 +418,13 @@ function catchAndReport<T>(callback: () => T): T | undefined {
 		return callback()
 	} catch (error) {
 		console.log(`Caught`, (error as any)?.stack)
-		Game.notify(`Caught ${(error as any)?.stack}`)
+		notify(`Caught ${(error as any)?.stack}\n${getProfileString()}`)
+	}
+}
+
+function notify(message: string) {
+	while (message.length) {
+		Game.notify(message.slice(0, 1000))
+		message = message.slice(1000)
 	}
 }
