@@ -269,15 +269,15 @@ export const loop = () => {
 				} else if (!creep.fatigue) {
 					const spawns = Object.values(Game.spawns)
 
-					assertOk(moveTo(
+					assertCode(moveTo(
 						creep,
 						[
 							...Object.values(Game.constructionSites),
 							...spawns.filter(spawn => spawn.store.getFreeCapacity(RESOURCE_ENERGY)),
 							...spawns.map(spawn => spawn.room.controller).filter(Boolean)
 						].filter(({ room }) => room && room.name != creep.room.name).map(({ pos }) => pos),
-						{ visualizePathStyle: { stroke: `purple` } }
-					), HERE)
+						{ visualizePathStyle: { stroke: `purple` } },
+					), [ OK, ERR_NO_PATH ], HERE)
 				}
 			} else {
 				measureCpu(HERE)
