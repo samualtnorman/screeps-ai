@@ -24,11 +24,12 @@
 - [x] make creeps explore rooms not in `RoomsMemory` when they have nothing else to do
 - [x] make creeps harvest from explored rooms if closer ones are blocked off
 - [x] delete dead creep memory
-- [ ] find hottest lines
+- [x] find hottest lines
 - [ ] loot graves and pickup energy
+- [ ] assign creeps to sources
 
 # Bugs
-- [ ] creeps might be just sitting on the edge of a room without actually leaving
+- [x] creeps might be just sitting on the edge of a room without actually leaving
 
 # Symtoms of Naive Design
 - Runtime errors when contents of `Memory` no longer compatible with updated script.
