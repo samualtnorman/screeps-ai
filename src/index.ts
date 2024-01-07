@@ -200,160 +200,157 @@ export const loop = () => {
 
 	measureCpu(HERE)
 
-	for (const creep of creeps) {
+	for (const creep of creeps) catchAndReport((): void => {
 		measureCpu(HERE)
 
-		catchAndReport(() => {
-			if (creep.spawning)
-				return
+		if (creep.spawning)
+			return
+
+		if (!creep.store.getUsedCapacity()) {
+			measureCpu(HERE)
+			// storage is empty
+			// harvest from an available source in the current room
+			// otherwise move towards a source in another room
+			// otherwise explore adjacent rooms
+			const source = creep.pos.findClosestByPath(FIND_SOURCES, { range: 1 })
 
 			measureCpu(HERE)
 
-			if (!creep.store.getUsedCapacity()) {
+			if (source) {
 				measureCpu(HERE)
-				// storage is empty
-				// harvest from an available source in the current room
-				// otherwise move towards a source in another room
-				// otherwise explore adjacent rooms
-				const source = creep.pos.findClosestByPath(FIND_SOURCES, { range: 1 })
-
+				harvest(creep, source)
+			} else if (!creep.fatigue) {
 				measureCpu(HERE)
 
-				if (source) {
+				// const targets = Object.keys(roomsMemory)
+				// 	.filter(room => room != creep.room.name)
+				// 	.map((room): MoveTarget => ({ pos: new RoomPosition(0, 0, room), range: 50 }))
+
+				// measureCpu(HERE)
+
+				// const code = targets.length
+				// 	? moveTo(creep, targets, { visualizePathStyle: { stroke: `#f99e2d` } })
+				// 	: undefined
+
+				// measureCpu(HERE)
+
+				// if (code != OK) {
+				// 	if (code != undefined)
+				// 		assertCode(code, [ ERR_NO_PATH ], HERE)
+
+				assertOk(moveTo(
+					creep,
+					Object.values(Game.map.describeExits(creep.room.name))
+						.map((room): MoveTarget => ({ pos: new RoomPosition(0, 0, room), range: 50 })),
+					{ visualizePathStyle: { stroke: `yellow` } }
+				), HERE)
+				// }
+			}
+		} else if (!creep.store.getFreeCapacity()) {
+			measureCpu(HERE)
+			// storage is full
+			// transfer to/build target in current room
+			// otherwise move towards target in another room
+			const target = creep.pos.findClosestByPath([
+				...creep.room.find(FIND_CONSTRUCTION_SITES),
+				...creep.room.find(FIND_MY_SPAWNS)
+					.filter(({ store }) => store.getFreeCapacity(RESOURCE_ENERGY)),
+				...creep.room.controller?.my ? [ creep.room.controller ] : []
+			], { range: 1 })
+
+			if (target) {
+				if (target instanceof ConstructionSite)
+					build(creep, target)
+				else
+					transfer(creep, target, RESOURCE_ENERGY)
+			} else if (!creep.fatigue) {
+				const spawns = Object.values(Game.spawns)
+
+				assertCode(moveTo(
+					creep,
+					[
+						...Object.values(Game.constructionSites),
+						...spawns.filter(spawn => spawn.store.getFreeCapacity(RESOURCE_ENERGY)),
+						...spawns.map(spawn => spawn.room.controller).filter(Boolean)
+					].filter(({ room }) => room && room.name != creep.room.name).map(({ pos }) => pos),
+					{ visualizePathStyle: { stroke: `purple` } },
+				), [ OK, ERR_NO_PATH ], HERE)
+			}
+		} else {
+			measureCpu(HERE)
+
+			const targets = [
+				...creep.room.find(FIND_SOURCES),
+				...creep.room.find(FIND_CONSTRUCTION_SITES),
+				...creep.room.find(FIND_MY_SPAWNS).filter(({ store }) => store.getFreeCapacity(RESOURCE_ENERGY)),
+				...creep.room.controller?.my ? [creep.room.controller] : []
+			]
+
+			measureCpu(HERE)
+
+			const target = creep.pos.findClosestByPath(targets, { range: 1 })
+
+			measureCpu(HERE)
+
+			if (target) {
+				measureCpu(HERE)
+
+				const range = target instanceof ConstructionSite || target instanceof StructureController
+					? 3
+					: 1
+
+				if (creep.pos.inRangeTo(target, range)) {
 					measureCpu(HERE)
-					harvest(creep, source)
-				} else if (!creep.fatigue) {
+
+					assertOk(target instanceof ConstructionSite
+						? (measureCpu(HERE), creep.build(target))
+						: (target instanceof Source
+							? (measureCpu(HERE), creep.harvest(target))
+							: (measureCpu(HERE), creep.transfer(target, RESOURCE_ENERGY))
+						),
+						HERE
+					)
+				} else {
 					measureCpu(HERE)
 
-					// const targets = Object.keys(roomsMemory)
-					// 	.filter(room => room != creep.room.name)
-					// 	.map((room): MoveTarget => ({ pos: new RoomPosition(0, 0, room), range: 50 }))
-
-					// measureCpu(HERE)
-
-					// const code = targets.length
-					// 	? moveTo(creep, targets, { visualizePathStyle: { stroke: `#f99e2d` } })
-					// 	: undefined
-
-					// measureCpu(HERE)
-
-					// if (code != OK) {
-					// 	if (code != undefined)
-					// 		assertCode(code, [ ERR_NO_PATH ], HERE)
-
-					assertOk(moveTo(
-						creep,
-						Object.values(Game.map.describeExits(creep.room.name))
-							.map((room): MoveTarget => ({ pos: new RoomPosition(0, 0, room), range: 50 })),
-						{ visualizePathStyle: { stroke: `yellow` } }
-					), HERE)
-					// }
+					assertOk(
+						moveTo(creep, { pos: target.pos, range }, { visualizePathStyle: { stroke: `#eab2e0` } }),
+						HERE
+					)
 				}
-			} else if (!creep.store.getFreeCapacity()) {
+
 				measureCpu(HERE)
-				// storage is full
-				// transfer to/build target in current room
-				// otherwise move towards target in another room
-				const target = creep.pos.findClosestByPath([
-					...creep.room.find(FIND_CONSTRUCTION_SITES),
-					...creep.room.find(FIND_MY_SPAWNS)
-						.filter(({ store }) => store.getFreeCapacity(RESOURCE_ENERGY)),
-					...creep.room.controller?.my ? [ creep.room.controller ] : []
-				], { range: 1 })
+			} else if (!creep.fatigue) {
+				measureCpu(HERE)
 
-				if (target) {
-					if (target instanceof ConstructionSite)
-						build(creep, target)
-					else
-						transfer(creep, target, RESOURCE_ENERGY)
-				} else if (!creep.fatigue) {
-					const spawns = Object.values(Game.spawns)
+				const spawns = Object.values(Game.spawns)
 
-					assertCode(moveTo(
+				assertOk(
+					moveTo(
 						creep,
 						[
 							...Object.values(Game.constructionSites),
 							...spawns.filter(spawn => spawn.store.getFreeCapacity(RESOURCE_ENERGY)),
 							...spawns.map(spawn => spawn.room.controller).filter(Boolean)
 						].filter(({ room }) => room && room.name != creep.room.name).map(({ pos }) => pos),
-						{ visualizePathStyle: { stroke: `purple` } },
-					), [ OK, ERR_NO_PATH ], HERE)
-				}
-			} else {
-				measureCpu(HERE)
-
-				const target = creep.pos.findClosestByPath([
-					...creep.room.find(FIND_SOURCES),
-					...creep.room.find(FIND_CONSTRUCTION_SITES),
-					...creep.room.find(FIND_MY_SPAWNS)
-						.filter(({ store }) => store.getFreeCapacity(RESOURCE_ENERGY)),
-					...creep.room.controller?.my ? [ creep.room.controller ] : []
-				], { range: 1 })
-
-				measureCpu(HERE)
-
-				if (target) {
-					measureCpu(HERE)
-
-					const range = target instanceof ConstructionSite || target instanceof StructureController
-						? 3
-						: 1
-
-					if (creep.pos.inRangeTo(target, range)) {
-						measureCpu(HERE)
-
-						assertOk(target instanceof ConstructionSite
-							? (measureCpu(HERE), creep.build(target))
-							: (target instanceof Source
-								? (measureCpu(HERE), creep.harvest(target))
-								: (measureCpu(HERE), creep.transfer(target, RESOURCE_ENERGY))
-							),
-							HERE
-						)
-					} else {
-						measureCpu(HERE)
-
-						assertOk(
-							moveTo(creep, { pos: target.pos, range }, { visualizePathStyle: { stroke: `#eab2e0` } }),
-							HERE
-						)
-					}
-
-					measureCpu(HERE)
-				} else if (!creep.fatigue) {
-					measureCpu(HERE)
-
-					const spawns = Object.values(Game.spawns)
-
-					assertOk(
-						moveTo(
-							creep,
-							[
-								...Object.values(Game.constructionSites),
-								...spawns.filter(spawn => spawn.store.getFreeCapacity(RESOURCE_ENERGY)),
-								...spawns.map(spawn => spawn.room.controller).filter(Boolean)
-							].filter(({ room }) => room && room.name != creep.room.name).map(({ pos }) => pos),
-							{ visualizePathStyle: { stroke: `#975cea` } }
-						),
-						HERE
-					)
-				}
+						{ visualizePathStyle: { stroke: `#975cea` } }
+					),
+					HERE
+				)
 			}
-
-			measureCpu(HERE)
-		})
+		}
 
 		measureCpu(HERE)
-	}
+	})
 
 	if (Game.cpu.bucket == 10000) {
 		Game.cpu.generatePixel()
 		console.log("generated a pixel")
 	}
 
-	measureCpu(HERE)
+	measureCpu(`reconcileTraffic()`)
 	reconcileTraffic()
-	measureCpu(HERE)
+	measureCpu(`end`)
 }
 
 function build(creep: Creep, site: ConstructionSite) {
