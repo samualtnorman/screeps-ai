@@ -280,63 +280,27 @@ export const loop = () => {
 			measureCpu(HERE)
 
 			const targets = [
-				...creep.room.find(FIND_SOURCES),
-				...creep.room.find(FIND_CONSTRUCTION_SITES),
-				...creep.room.find(FIND_MY_SPAWNS).filter(({ store }) => store.getFreeCapacity(RESOURCE_ENERGY)),
-				...creep.room.controller?.my ? [creep.room.controller] : []
+				...creep.room.find(FIND_SOURCES).map(target => ({ target, range: 1 })),
+				...creep.room.find(FIND_CONSTRUCTION_SITES).map(target => ({ target, range: 3 })),
+				...creep.room.find(FIND_MY_SPAWNS).filter(({ store }) => store.getFreeCapacity(RESOURCE_ENERGY)).map(target => ({ target, range: 1 })),
+				...creep.room.controller?.my ? [ { target: creep.room.controller, range: 3 } ] : []
 			]
 
-			measureCpu(HERE)
-
-			const target = creep.pos.findClosestByPath(targets, { range: 1 })
-
-			measureCpu(HERE)
+			const target = targets.find(({ target, range }) => creep.pos.inRangeTo(target, range))?.target
 
 			if (target) {
-				measureCpu(HERE)
-
-				const range = target instanceof ConstructionSite || target instanceof StructureController
-					? 3
-					: 1
-
-				if (creep.pos.inRangeTo(target, range)) {
-					measureCpu(HERE)
-
-					assertOk(target instanceof ConstructionSite
-						? (measureCpu(HERE), creep.build(target))
-						: (target instanceof Source
-							? (measureCpu(HERE), creep.harvest(target))
-							: (measureCpu(HERE), creep.transfer(target, RESOURCE_ENERGY))
-						),
-						HERE
-					)
-				} else {
-					measureCpu(HERE)
-
-					assertOk(
-						moveTo(creep, { pos: target.pos, range }, { visualizePathStyle: { stroke: `#eab2e0` } }),
-						HERE
-					)
-				}
-
-				measureCpu(HERE)
-			} else if (!creep.fatigue) {
-				measureCpu(HERE)
-
-				const spawns = Object.values(Game.spawns)
-
 				assertOk(
-					moveTo(
-						creep,
-						[
-							...Object.values(Game.constructionSites),
-							...spawns.filter(spawn => spawn.store.getFreeCapacity(RESOURCE_ENERGY)),
-							...spawns.map(spawn => spawn.room.controller).filter(Boolean)
-						].filter(({ room }) => room && room.name != creep.room.name).map(({ pos }) => pos),
-						{ visualizePathStyle: { stroke: `#975cea` } }
-					),
+					target instanceof ConstructionSite ? (measureCpu(HERE), creep.build(target))
+						: target instanceof Source ? (measureCpu(HERE), creep.harvest(target))
+						: (measureCpu(HERE), creep.transfer(target, RESOURCE_ENERGY)),
 					HERE
 				)
+			} else if (!creep.fatigue) {
+				assertOk(moveTo(
+					creep,
+					targets.map(({ target, range }) => ({ pos: target.pos, range })),
+					{ visualizePathStyle: { stroke: `#eab2e0` } }
+				), HERE)
 			}
 		}
 
@@ -432,5 +396,15 @@ function notify(message: string) {
 	while (message.length) {
 		Game.notify(message.slice(0, 1000))
 		message = message.slice(1000)
+	}
+}
+
+function* getPositionsInRange(roomPosition: RoomPosition, range: number) {
+	const maxX = Math.min(roomPosition.x + range, 49)
+	const maxY = Math.min(roomPosition.y + range, 49)
+
+	for (let x = Math.max(roomPosition.x - range, 0); x <= maxX; x++) {
+		for (let y = Math.max(roomPosition.y - range, 0); y <= maxY; y++)
+			yield new RoomPosition(x, y, roomPosition.roomName)
 	}
 }

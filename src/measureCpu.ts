@@ -6,7 +6,7 @@ const profiles = new DynamicMap((_: string) => 0)
 let cpuUsage = 0
 
 export function prepareMeasureCpu(): void {
-	from = undefined
+	to = undefined
 	cpuUsage = Game.cpu.getUsed()
 }
 
