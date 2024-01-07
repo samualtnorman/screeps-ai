@@ -33,4 +33,4 @@ export const getProfileString = () => {
 		.join(`\n`)
 }
 
-Object.defineProperty(global, `profile`, { get: getProfileString })
+Object.defineProperty(globalThis, `profile`, { get: getProfileString })

@@ -12,7 +12,15 @@ const MINIFY = true
 
 /** @type {import("rollup").RollupOptions} */ export default {
 	input: `src/index.ts`,
-	output: { file: `dist/main.js`, generatedCode: "es2015", interop: "esModule", compact: MINIFY, format: "commonjs" },
+	output: {
+		file: `dist/main.js`,
+		generatedCode: "es2015",
+		interop: "esModule",
+		compact: MINIFY,
+		format: "commonjs",
+		intro: `global.globalThis = global; global.window = global;`,
+
+	},
 	strictDeprecations: true,
 	plugins: [
 		nodeResolve({ extensions: [ ".ts" ] }),
@@ -31,6 +39,6 @@ const MINIFY = true
 			keep_fnames: true,
 			compress: { passes: Infinity },
 			maxWorkers: Math.floor(cpus().length / 2)
-		})),
+		}))
 	]
 }
