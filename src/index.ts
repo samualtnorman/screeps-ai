@@ -295,19 +295,28 @@ export const loop = () => {
 				if (target) {
 					measureCpu(HERE)
 
-					const code = target instanceof ConstructionSite
-						? (measureCpu(HERE), creep.build(target))
-						: (target instanceof Source
-							? (measureCpu(HERE), creep.harvest(target))
-							: (measureCpu(HERE), creep.transfer(target, RESOURCE_ENERGY))
-						)
+					const range = target instanceof ConstructionSite || target instanceof StructureController
+						? 3
+						: 1
 
-					measureCpu(HERE)
-
-					if (code != OK) {
-						assertCode(code, [ ERR_NOT_IN_RANGE ], HERE)
+					if (creep.pos.inRangeTo(target, range)) {
 						measureCpu(HERE)
-						assertOk(moveTo(creep, target, { visualizePathStyle: { stroke: `#eab2e0` } }), HERE)
+
+						assertOk(target instanceof ConstructionSite
+							? (measureCpu(HERE), creep.build(target))
+							: (target instanceof Source
+								? (measureCpu(HERE), creep.harvest(target))
+								: (measureCpu(HERE), creep.transfer(target, RESOURCE_ENERGY))
+							),
+							HERE
+						)
+					} else {
+						measureCpu(HERE)
+
+						assertOk(
+							moveTo(creep, { pos: target.pos, range }, { visualizePathStyle: { stroke: `#eab2e0` } }),
+							HERE
+						)
 					}
 
 					measureCpu(HERE)
