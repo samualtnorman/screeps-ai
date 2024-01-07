@@ -262,6 +262,7 @@ export const loop = () => {
 				assertOk(
 					target instanceof ConstructionSite ? (measureCpu(HERE), creep.build(target))
 						: target instanceof Source ? (measureCpu(HERE), creep.harvest(target))
+						: target instanceof StructureController ? (measureCpu(HERE), creep.upgradeController(target))
 						: (measureCpu(HERE), creep.transfer(target, RESOURCE_ENERGY)),
 					HERE
 				)
