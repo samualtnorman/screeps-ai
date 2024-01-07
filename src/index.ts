@@ -1,18 +1,17 @@
-import { assert } from "@samual/lib/assert"
 import "@total-typescript/ts-reset"
 import { MoveTarget, moveTo, preTick, reconcileTraffic } from "screeps-cartographer"
 import * as v from "valibot"
-import { getProfileString, measureCpu, prepareMeasureCpu } from "./measureCpu"
+import { assertCode, assertOk } from "./assertCode"
+import { build } from "./build"
+import { catchAndReport } from "./catchAndReport"
+import { harvest } from "./harvest"
+import { measureCpu, prepareMeasureCpu } from "./measureCpu"
+import { transfer } from "./transfer"
+import { getMemory, makeMemoryOptions, setMemory } from "./typed-memory"
 
-type MemoryOptions<T extends v.BaseSchema> = { name: string, schema: T }
+console.log(`Started`)
 
-const makeMemoryOptions = <T extends v.BaseSchema>(options: MemoryOptions<T>) => options
-
-const getMemory = <T extends v.BaseSchema>(options: MemoryOptions<T>) =>
-	v.parse(options.schema, Memory[options.name])
-
-const setMemory = <T extends v.BaseSchema>(options: MemoryOptions<T>, value: v.Output<T>) =>
-	Memory[options.name] = value
+const countConstructionSites = () => Object.keys(Game.constructionSites).length
 
 const RoomsMemory = makeMemoryOptions({
 	name: `vdi1sf9zaxh3gh60o319sfhe`,
@@ -22,36 +21,9 @@ const RoomsMemory = makeMemoryOptions({
 	), {})
 })
 
-console.log(`Started`)
-
-const Returns: Record<number, string> = {
-	0: "ok",
-	"-1": "not owner",
-	"-2": "no path",
-	"-3": "name exists",
-	"-4": "busy",
-	"-5": "not found",
-	"-6": "not enough",
-	"-7": "invalid target",
-	"-8": "full",
-	"-9": "not in range",
-	"-10": "invalid args",
-	"-11": "tired",
-	"-12": "no bodypart",
-	"-14": "RCL not enough",
-	"-15": "GCL not enough",
-}
-
-const assertCode = (code: number, statuses: number[], message: string) =>
-	assert(statuses.includes(code), `Got: ${code} ${Returns[code]}, ${message}`)
-
-const assertOk = (code: number, message: string) => assert(code == OK, `Got: ${code} ${Returns[code]}, ${message}`)
-
-const countConstructionSites = () => Object.keys(Game.constructionSites).length
+const roomsMemory = getMemory(RoomsMemory)
 
 let ticksAlive = 0
-
-const roomsMemory = getMemory(RoomsMemory)
 
 export const loop = () => {
 	prepareMeasureCpu()
@@ -150,9 +122,7 @@ export const loop = () => {
 		roomsMemory[room.name] = { sources: room.find(FIND_SOURCES).map(({ pos }) => ({ x: pos.x, y: pos.y })) }
 
 	measureCpu(HERE)
-
 	setMemory(RoomsMemory, roomsMemory)
-
 	measureCpu(HERE)
 
 	const creeps = Object.values(Game.creeps)
@@ -315,96 +285,4 @@ export const loop = () => {
 	measureCpu(`reconcileTraffic()`)
 	reconcileTraffic()
 	measureCpu(`end`)
-}
-
-function build(creep: Creep, site: ConstructionSite) {
-	measureCpu(HERE)
-
-	const code = creep.build(site)
-
-	if (code != OK) {
-		assertCode(code, [ ERR_NOT_IN_RANGE ], HERE)
-
-		if (!creep.fatigue)
-			assertOk(moveTo(creep, site, { visualizePathStyle: { stroke: `red` } }), HERE)
-	}
-
-	measureCpu(HERE)
-}
-
-function transfer(creep: Creep, target: AnyCreep | Structure, resourceType: ResourceConstant, amount?: number) {
-	measureCpu(HERE)
-
-	const code = creep.transfer(target, resourceType, amount)
-
-	if (code != OK) {
-		assertCode(code, [ ERR_NOT_IN_RANGE ], HERE)
-
-		// // TODO iterate through creeps sorted by closest up to self to find targets transfer to
-		// const otherCreep = target.pos.findClosestByPath([ creep, ...creep.pos.findInRange(FIND_MY_CREEPS, 1) ])
-
-		// if creep is able to get rid of all energy, do not move towards target
-		// if creep is not, move towards
-
-		// if (otherCreep && otherCreep.id != creep.id && otherCreep.store.getFreeCapacity()) {
-		// 	assertOk(creep.transfer(otherCreep, RESOURCE_ENERGY), HERE)
-
-		// 	if (!otherCreep.store.getUsedCapacity())
-		// 		otherCreep.cancelOrder(`move`)
-
-		// 	if (!creep.fatigue && otherCreep.store.getFreeCapacity() < creep.store.energy)
-		// 		assertOk(moveTo(creep, target, { visualizePathStyle: { stroke: `green` } }), HERE)
-		// } else
-		if (!creep.fatigue)
-			assertOk(moveTo(creep, target, { visualizePathStyle: { stroke: `green` } }), HERE)
-	}
-
-	measureCpu(HERE)
-}
-
-function harvest(creep: Creep, target: Source | Mineral | Deposit) {
-	measureCpu(HERE)
-
-	const code = creep.harvest(target)
-
-	measureCpu(HERE)
-
-	if (code != OK) {
-		measureCpu(HERE)
-		assertCode(code, [ ERR_NOT_IN_RANGE ], HERE)
-		measureCpu(HERE)
-
-		if (!creep.fatigue)
-			assertOk(moveTo(creep, target, { visualizePathStyle: { stroke: `blue` } }), HERE)
-
-		measureCpu(HERE)
-	}
-
-	measureCpu(HERE)
-}
-
-function catchAndReport<T>(callback: () => T): T | undefined {
-	try {
-		return callback()
-	} catch (error) {
-		console.log(`Caught`, (error as any)?.stack)
-		notify(`Caught ${(error as any)?.stack}\n${getProfileString()}`)
-	}
-}
-
-function notify(message: string) {
-	while (message.length) {
-		Game.notify(message.slice(0, 1000))
-		message = message.slice(1000)
-	}
-}
-
-function* getPositionsInRange(roomPosition: RoomPosition, range: number) {
-	const maxX = Math.min(roomPosition.x + range, 49)
-	const maxY = Math.min(roomPosition.y + range, 49)
-
-	for (let x = Math.max(roomPosition.x - range, 0); x <= maxX; x++) {
-		for (let y = Math.max(roomPosition.y - range, 0); y <= maxY; y++)
-			yield new RoomPosition(x, y, roomPosition.roomName)
-	}
 }
