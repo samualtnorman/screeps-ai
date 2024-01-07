@@ -4,9 +4,11 @@ import babelPresetTypescript from "@babel/preset-typescript"
 import { babel } from "@rollup/plugin-babel"
 import commonjs from "@rollup/plugin-commonjs"
 import { nodeResolve } from "@rollup/plugin-node-resolve"
+import terser from "@rollup/plugin-terser"
 import babelPluginHere from "babel-plugin-here"
+import { cpus } from "os"
 
-const MINIFY = false
+const MINIFY = true
 
 /** @type {import("rollup").RollupOptions} */ export default {
 	input: `src/index.ts`,
@@ -23,6 +25,12 @@ const MINIFY = false
 				[ babelPresetTypescript, { allowDeclareFields: true } ]
 			],
 			plugins: [ babelPluginHere() ]
-		})
+		}),
+		MINIFY && terser(/** @type {Parameters<typeof terser>[0] & { maxWorkers: number }} */ ({
+			keep_classnames: true,
+			keep_fnames: true,
+			compress: { passes: Infinity },
+			maxWorkers: Math.floor(cpus().length / 2)
+		})),
 	]
 }

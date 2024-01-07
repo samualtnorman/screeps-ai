@@ -12,6 +12,7 @@
 		"@rollup/plugin-babel": "^6.0.4",
 		"@rollup/plugin-commonjs": "^25.0.7",
 		"@rollup/plugin-node-resolve": "^15.2.3",
+		"@rollup/plugin-terser": "^0.4.4",
 		"@total-typescript/ts-reset": "^0.5.1",
 		"@types/node": "^20.10.5",
 		"@types/screeps": "^3.3.7",
