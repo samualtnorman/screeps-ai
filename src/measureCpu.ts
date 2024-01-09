@@ -33,7 +33,8 @@ export const getProfileString = () => {
 		.filter(({ percent }) => percent > 0)
 		.sort((a, b) => b.cpu - a.cpu)
 		.map(({ name, cpu, percent }) => `${name}: ${numberToCompact(cpu)} (${percent}%) ${numberToCompact(cpu / ticksAlive)}/tick`)
-		.join(`\n`)}`
+		.join(`\n`)
+	}`
 }
 
 Object.defineProperty(globalThis, `profile`, { get: getProfileString })
