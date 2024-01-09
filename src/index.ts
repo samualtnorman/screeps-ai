@@ -6,12 +6,22 @@ import { catchAndReport } from "./catchAndReport"
 import { measureCpu, prepareMeasureCpu } from "./measureCpu"
 import { getMemory, makeMemoryOptions, setMemory } from "./typed-memory"
 
+const countConstructionSites = () => Object.keys(Game.constructionSites).length
+
 const moveToRoom = (creep: Creep, targets: Set<string>, opts?: MoveOpts) =>
 	moveTo(creep, [ ...targets ].map((room): MoveTarget => ({ pos: new RoomPosition(0, 0, room), range: 50 })), opts)
 
 console.log(`Started`)
 
-const countConstructionSites = () => Object.keys(Game.constructionSites).length
+const OptionalStringSchema = v.optional(v.string())
+
+const ExitsInformationSchema =
+	v.object({ 1: OptionalStringSchema, 3: OptionalStringSchema, 5: OptionalStringSchema, 7: OptionalStringSchema })
+
+const ExitsMemory = makeMemoryOptions({
+	name: `r13bdvehoe4lothcx16qdna6`,
+	schema: v.fallback(v.record(v.string(), ExitsInformationSchema), {})
+})
 
 const RoomsMemory = makeMemoryOptions({
 	name: `vdi1sf9zaxh3gh60o319sfhe`,
@@ -20,6 +30,15 @@ const RoomsMemory = makeMemoryOptions({
 		v.object({ sources: v.array(v.object({ x: v.number(), y: v.number() })) })
 	), {})
 })
+
+const exitsMemory = getMemory(ExitsMemory)
+
+const describeExits = (roomName: string) => {
+	if (exitsMemory[roomName])
+		return exitsMemory[roomName] as ExitsInformation
+
+	return exitsMemory[roomName] = Game.map.describeExits(roomName)
+}
 
 const roomsMemory = getMemory(RoomsMemory)
 
@@ -99,7 +118,7 @@ export const loop = () => {
 					}
 				}
 
-				for (const exit of Object.keys(Game.map.describeExits(spawn.room.name))) {
+				for (const exit of Object.keys(describeExits(spawn.room.name))) {
 					const position = spawn.pos.findClosestByPath(Number(exit) as 1 | 3 | 5 | 7)
 
 					if (position && !position.lookFor(LOOK_STRUCTURES).length) {
@@ -191,23 +210,34 @@ export const loop = () => {
 			const sources = creep.room.find(FIND_SOURCES)
 			const target = sources.find(source => source.pos.isNearTo(creep))
 
-			if (target)
+			measureCpu(HERE)
+
+			if (target) {
+				measureCpu(HERE)
 				assertOk(creep.harvest(target), HERE)
-			else if (!creep.fatigue) {
+			} else if (!creep.fatigue) {
+				measureCpu(HERE)
+
 				const code = moveTo(
 					creep,
 					sources.map(({ pos }): MoveTarget => ({ pos, range: 1 })),
 					{ visualizePathStyle: { stroke: `red` }, avoidCreeps: true }
 				)
 
+				measureCpu(HERE)
+
 				if (code == ERR_NO_PATH) {
+					measureCpu(HERE)
+
 					assertOk(moveToRoom(
 						creep,
-						new Set(Object.values(Game.map.describeExits(creep.room.name))),
+						new Set(Object.values(describeExits(creep.room.name))),
 						{ visualizePathStyle: { stroke: `green` } }
 					), HERE)
-				} else
+				} else {
+					measureCpu(HERE)
 					assertOk(code, HERE)
+				}
 			}
 		} else {
 			// transfer to/build target in range
@@ -225,9 +255,15 @@ export const loop = () => {
 				...creep.room.controller?.my ? [ { target: creep.room.controller, range: 3 } ] : []
 			]
 
+			measureCpu(HERE)
+
 			const target = targets.find(({ target, range }) => creep.pos.inRangeTo(target, range))?.target
 
+			measureCpu(HERE)
+
 			if (target) {
+				measureCpu(HERE)
+
 				assertOk(
 					target instanceof ConstructionSite ? (measureCpu(HERE), creep.build(target))
 						: target instanceof Source ? (measureCpu(HERE), creep.harvest(target))
@@ -236,13 +272,19 @@ export const loop = () => {
 					HERE
 				)
 			} else if (!creep.fatigue) {
+				measureCpu(HERE)
+
 				const code = moveTo(
 					creep,
 					targets.map(({ target, range }) => ({ pos: target.pos, range })),
 					{ visualizePathStyle: { stroke: `blue` }, avoidCreeps: true }
 				)
 
+				measureCpu(HERE)
+
 				if (code == ERR_NO_PATH) {
+					measureCpu(HERE)
+
 					const spawns = Object.values(Game.spawns)
 
 					assertOk(moveToRoom(
@@ -254,13 +296,17 @@ export const loop = () => {
 						].filter(({ room }) => room && room.name != creep.room.name).map(({ room }) => room!.name)),
 						{ visualizePathStyle: { stroke: `orange` } }
 					), HERE)
-				} else
+				} else {
+					measureCpu(HERE)
 					assertOk(code, HERE)
+				}
 			}
 		}
 
 		measureCpu(HERE)
 	})
+
+	setMemory(ExitsMemory, exitsMemory)
 
 	if (Game.cpu.bucket == 10000) {
 		Game.cpu.generatePixel()
