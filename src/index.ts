@@ -2,11 +2,8 @@ import "@total-typescript/ts-reset"
 import { MoveOpts, MoveTarget, moveTo, preTick, reconcileTraffic } from "screeps-cartographer"
 import * as v from "valibot"
 import { assertCode, assertOk } from "./assertCode"
-import { build } from "./build"
 import { catchAndReport } from "./catchAndReport"
-import { harvest } from "./harvest"
 import { measureCpu, prepareMeasureCpu } from "./measureCpu"
-import { transfer } from "./transfer"
 import { getMemory, makeMemoryOptions, setMemory } from "./typed-memory"
 
 const moveToRoom = (creep: Creep, targets: Set<string>, opts?: MoveOpts) =>
@@ -30,6 +27,7 @@ export let ticksAlive = 0
 
 export const loop = () => {
 	prepareMeasureCpu()
+	measureCpu(HERE)
 	ticksAlive++
 	console.log(`Tick: ${Game.time} (${ticksAlive})`)
 	preTick()
@@ -77,7 +75,8 @@ export const loop = () => {
 							.every(item => item.type != LOOK_CONSTRUCTION_SITES && item.type != LOOK_STRUCTURES)
 						) {
 							assertOk(
-								spawn.room.createConstructionSite(step.x, step.y, STRUCTURE_ROAD), `${HERE} ${step.x} ${step.y}`
+								spawn.room.createConstructionSite(step.x, step.y, STRUCTURE_ROAD),
+								`${HERE} ${step.x} ${step.y}`
 							)
 
 							return
@@ -104,7 +103,9 @@ export const loop = () => {
 					const position = spawn.pos.findClosestByPath(Number(exit) as 1 | 3 | 5 | 7)
 
 					if (position && !position.lookFor(LOOK_STRUCTURES).length) {
-						for (const step of spawn.pos.findPathTo(position, { ignoreCreeps: true, ignoreRoads: true, swampCost: 1, range: 1 })) {
+						for (const step of spawn.pos
+							.findPathTo(position, { ignoreCreeps: true, ignoreRoads: true, swampCost: 1, range: 1 })
+						) {
 							if (spawn.room.lookAt(step.x, step.y)
 								.every(item => item.type != LOOK_CONSTRUCTION_SITES && item.type != LOOK_STRUCTURES)
 							) {
@@ -181,80 +182,34 @@ export const loop = () => {
 
 		if (!creep.store.getUsedCapacity()) {
 			// storage is empty
-			// harvest from an available source in the current room
-			// otherwise move towards a source in another room
-			// otherwise explore adjacent rooms
+			// harvest from source in range
+			// otherwise move towards source in same room
+			// otherwise move towards another room
 
 			measureCpu(HERE)
 
-			const source = creep.pos.findClosestByPath(FIND_SOURCES, { range: 1 })
+			const sources = creep.room.find(FIND_SOURCES)
+			const target = sources.find(source => source.pos.isNearTo(creep))
 
-			measureCpu(HERE)
-
-			if (source) {
-				measureCpu(HERE)
-				harvest(creep, source)
-			} else if (!creep.fatigue) {
-				measureCpu(HERE)
-
-				// const targets = Object.keys(roomsMemory)
-				// 	.filter(room => room != creep.room.name)
-				// 	.map((room): MoveTarget => ({ pos: new RoomPosition(0, 0, room), range: 50 }))
-
-				// measureCpu(HERE)
-
-				// const code = targets.length
-				// 	? moveTo(creep, targets, { visualizePathStyle: { stroke: `#f99e2d` } })
-				// 	: undefined
-
-				// measureCpu(HERE)
-
-				// if (code != OK) {
-				// 	if (code != undefined)
-				// 		assertCode(code, [ ERR_NO_PATH ], HERE)
-
-				assertOk(moveTo(
+			if (target)
+				assertOk(creep.harvest(target), HERE)
+			else if (!creep.fatigue) {
+				const code = moveTo(
 					creep,
-					Object.values(Game.map.describeExits(creep.room.name))
-						.map((room): MoveTarget => ({ pos: new RoomPosition(0, 0, room), range: 50 })),
-					{ visualizePathStyle: { stroke: `yellow` } }
-				), HERE)
-				// }
-			}
-		} else if (!creep.store.getFreeCapacity()) {
-			// storage is full
-			// transfer to/build target in current room
-			// otherwise move towards target in another room
+					sources.map(({ pos }): MoveTarget => ({ pos, range: 1 })),
+					{ visualizePathStyle: { stroke: `red` }, avoidCreeps: true }
+				)
 
-			measureCpu(HERE)
-
-			const target = creep.pos.findClosestByPath([
-				...creep.room.find(FIND_CONSTRUCTION_SITES),
-				...creep.room.find(FIND_MY_SPAWNS)
-					.filter(({ store }) => store.getFreeCapacity(RESOURCE_ENERGY)),
-				...creep.room.controller?.my ? [ creep.room.controller ] : []
-			], { range: 1 })
-
-			if (target) {
-				if (target instanceof ConstructionSite)
-					build(creep, target)
-				else
-					transfer(creep, target, RESOURCE_ENERGY)
-			} else if (!creep.fatigue) {
-				const spawns = Object.values(Game.spawns)
-
-				assertCode(moveTo(
-					creep,
-					[
-						...Object.values(Game.constructionSites),
-						...spawns.filter(spawn => spawn.store.getFreeCapacity(RESOURCE_ENERGY)),
-						...spawns.map(spawn => spawn.room.controller).filter(Boolean)
-					].filter(({ room }) => room && room.name != creep.room.name).map(({ pos }) => pos),
-					{ visualizePathStyle: { stroke: `purple` } },
-				), [ OK, ERR_NO_PATH ], HERE)
+				if (code == ERR_NO_PATH) {
+					assertOk(moveToRoom(
+						creep,
+						new Set(Object.values(Game.map.describeExits(creep.room.name))),
+						{ visualizePathStyle: { stroke: `green` } }
+					), HERE)
+				} else
+					assertOk(code, HERE)
 			}
 		} else {
-			// storage is neither full or empty
 			// transfer to/build target in range
 			// otherwise move towards target in same room
 			// otherwise move towards target in another room
@@ -262,13 +217,15 @@ export const loop = () => {
 			measureCpu(HERE)
 
 			const targets = [
-				...creep.room.find(FIND_SOURCES).map(target => ({ target, range: 1 })),
+				...creep.store.getFreeCapacity() ? creep.room.find(FIND_SOURCES).map(target => ({ target, range: 1 }))
+					: [],
 				...creep.room.find(FIND_CONSTRUCTION_SITES).map(target => ({ target, range: 3 })),
-				...creep.room.find(FIND_MY_SPAWNS).filter(({ store }) => store.getFreeCapacity(RESOURCE_ENERGY)).map(target => ({ target, range: 1 })),
+				...creep.room.find(FIND_MY_SPAWNS).filter(({ store }) => store.getFreeCapacity(RESOURCE_ENERGY))
+					.map(target => ({ target, range: 1 })),
 				...creep.room.controller?.my ? [ { target: creep.room.controller, range: 3 } ] : []
 			]
 
-				const target = targets.find(({ target, range }) => creep.pos.inRangeTo(target, range))?.target
+			const target = targets.find(({ target, range }) => creep.pos.inRangeTo(target, range))?.target
 
 			if (target) {
 				assertOk(
@@ -282,17 +239,21 @@ export const loop = () => {
 				const code = moveTo(
 					creep,
 					targets.map(({ target, range }) => ({ pos: target.pos, range })),
-					{ visualizePathStyle: { stroke: `#eab2e0` } }
+					{ visualizePathStyle: { stroke: `blue` }, avoidCreeps: true }
 				)
 
 				if (code == ERR_NO_PATH) {
 					const spawns = Object.values(Game.spawns)
 
-					assertOk(moveToRoom(creep, new Set([
-						...Object.values(Game.constructionSites),
-						...spawns.filter(spawn => spawn.store.getFreeCapacity(RESOURCE_ENERGY)),
-						...spawns.map(spawn => spawn.room.controller).filter(Boolean)
-					].filter(({ room }) => room && room.name != creep.room.name).map(({ room }) => room!.name)), { visualizePathStyle: { stroke: `#573d9f` } }), HERE)
+					assertOk(moveToRoom(
+						creep,
+						new Set([
+							...Object.values(Game.constructionSites),
+							...spawns.filter(spawn => spawn.store.getFreeCapacity(RESOURCE_ENERGY)),
+							...spawns.map(spawn => spawn.room.controller).filter(Boolean)
+						].filter(({ room }) => room && room.name != creep.room.name).map(({ room }) => room!.name)),
+						{ visualizePathStyle: { stroke: `orange` } }
+					), HERE)
 				} else
 					assertOk(code, HERE)
 			}

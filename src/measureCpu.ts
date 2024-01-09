@@ -8,7 +8,7 @@ let cpuUsage = 0
 
 export function prepareMeasureCpu(): void {
 	to = undefined
-	cpuUsage = Game.cpu.getUsed()
+	cpuUsage = 0
 }
 
 export function measureCpu(name: string): void {

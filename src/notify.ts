@@ -3,7 +3,7 @@
 
 export function notify(message: string) {
 	while (message.length) {
-		Game.notify(message.slice(0, 1000))
-		message = message.slice(1000)
+		Game.notify(message.slice(0, 500))
+		message = message.slice(500)
 	}
 }
