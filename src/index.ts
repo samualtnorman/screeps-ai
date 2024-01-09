@@ -23,7 +23,7 @@ const RoomsMemory = makeMemoryOptions({
 
 const roomsMemory = getMemory(RoomsMemory)
 
-let ticksAlive = 0
+export let ticksAlive = 0
 
 export const loop = () => {
 	prepareMeasureCpu()
@@ -256,22 +256,24 @@ export const loop = () => {
 				...creep.room.controller?.my ? [ { target: creep.room.controller, range: 3 } ] : []
 			]
 
-			const target = targets.find(({ target, range }) => creep.pos.inRangeTo(target, range))?.target
+			if (targets.length) {
+				const target = targets.find(({ target, range }) => creep.pos.inRangeTo(target, range))?.target
 
-			if (target) {
-				assertOk(
-					target instanceof ConstructionSite ? (measureCpu(HERE), creep.build(target))
-						: target instanceof Source ? (measureCpu(HERE), creep.harvest(target))
-						: target instanceof StructureController ? (measureCpu(HERE), creep.upgradeController(target))
-						: (measureCpu(HERE), creep.transfer(target, RESOURCE_ENERGY)),
-					HERE
-				)
-			} else if (!creep.fatigue) {
-				assertOk(moveTo(
-					creep,
-					targets.map(({ target, range }) => ({ pos: target.pos, range })),
-					{ visualizePathStyle: { stroke: `#eab2e0` } }
-				), HERE)
+				if (target) {
+					assertOk(
+						target instanceof ConstructionSite ? (measureCpu(HERE), creep.build(target))
+							: target instanceof Source ? (measureCpu(HERE), creep.harvest(target))
+							: target instanceof StructureController ? (measureCpu(HERE), creep.upgradeController(target))
+							: (measureCpu(HERE), creep.transfer(target, RESOURCE_ENERGY)),
+						HERE
+					)
+				} else if (!creep.fatigue) {
+					assertOk(moveTo(
+						creep,
+						targets.map(({ target, range }) => ({ pos: target.pos, range })),
+						{ visualizePathStyle: { stroke: `#eab2e0` } }
+					), HERE)
+				}
 			}
 		}
 

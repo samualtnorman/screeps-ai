@@ -1,4 +1,5 @@
 import { DynamicMap } from "@samual/lib/DynamicMap"
+import { ticksAlive } from "."
 
 let from: string | undefined
 let to: string | undefined
@@ -21,16 +22,18 @@ export function measureCpu(name: string): void {
 	cpuUsage = newCpuUsage
 }
 
+const numberToCompact = (number: number) => number.toLocaleString(undefined, { notation: `compact` })
+
 export const getProfileString = () => {
 	const profilesValues = [ ...profiles ]
 	const totalCpu = profilesValues.reduce((total, [ , cpu ]) => total + cpu, 0)
 
-	return profilesValues
+	return `total: ${numberToCompact(totalCpu)} (${numberToCompact(totalCpu / ticksAlive)}/tick)\n${profilesValues
 		.map(([ name, cpu ]) => ({ name, cpu, percent: Math.round((cpu / totalCpu * 100)) }))
 		.filter(({ percent }) => percent > 0)
 		.sort((a, b) => b.cpu - a.cpu)
-		.map(({ name, cpu, percent }) => `${name}: ${cpu.toLocaleString(undefined, { notation: "compact" })} (${percent}%)`)
-		.join(`\n`)
+		.map(({ name, cpu, percent }) => `${name}: ${numberToCompact(cpu)} (${percent}%) ${numberToCompact(cpu / ticksAlive)}/tick`)
+		.join(`\n`)}`
 }
 
 Object.defineProperty(globalThis, `profile`, { get: getProfileString })
