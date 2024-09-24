@@ -1,9 +1,9 @@
-import { DynamicMap } from "@samual/lib/DynamicMap"
+import { AutoMap } from "@samual/lib/AutoMap"
 import { ticksAlive } from "."
 
 let from: string | undefined
 let to: string | undefined
-const profiles = new DynamicMap((_: string) => 0)
+const profiles = new AutoMap((_: string) => 0)
 let cpuUsage = 0
 
 export function prepareMeasureCpu(): void {

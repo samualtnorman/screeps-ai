@@ -2,22 +2,22 @@
 	"private": true,
 	"type": "module",
 	"dependencies": {
-		"@samual/lib": "^0.9.0",
-		"screeps-cartographer": "^1.8.9",
-		"valibot": "^0.25.0"
+		"@samual/lib": "0.12.1-5bd9e27",
+		"screeps-cartographer": "^1.8.12",
+		"valibot": "^0.42.1"
 	},
 	"devDependencies": {
-		"@babel/preset-env": "^7.23.6",
-		"@babel/preset-typescript": "^7.23.3",
+		"@babel/preset-env": "^7.25.4",
+		"@babel/preset-typescript": "^7.24.7",
 		"@rollup/plugin-babel": "^6.0.4",
-		"@rollup/plugin-commonjs": "^25.0.7",
-		"@rollup/plugin-node-resolve": "^15.2.3",
+		"@rollup/plugin-commonjs": "^28.0.0",
+		"@rollup/plugin-node-resolve": "^15.3.0",
 		"@rollup/plugin-terser": "^0.4.4",
-		"@total-typescript/ts-reset": "^0.5.1",
-		"@types/node": "^20.10.5",
-		"@types/screeps": "^3.3.7",
-		"babel-plugin-here": "^0.0.1",
-		"nodemon": "^3.0.2",
-		"rollup": "^4.9.1"
+		"@total-typescript/ts-reset": "^0.6.1",
+		"@types/node": "^20.16.6",
+		"@types/screeps": "^3.3.8",
+		"babel-plugin-here": "^1.0.1",
+		"nodemon": "^3.1.7",
+		"rollup": "^4.22.4"
 	}
 }

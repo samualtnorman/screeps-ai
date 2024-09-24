@@ -8,7 +8,7 @@ const LOCAL_ORIGIN = "http://localhost:21025"
 const OFFICIAL_ORIGIN = "https://screeps.com"
 const ORIGIN = OFFICIAL_ORIGIN
 
-const ApiUserCodeResponseSchema = v.object({ ok: v.literal(1), branch: v.string(), modules: v.record(v.string()) })
+const ApiUserCodeResponseSchema = v.object({ ok: v.literal(1), branch: v.string(), modules: v.record(v.string(), v.string()) })
 const ApiUserCloneBranchSchema = v.object({ ok: v.literal(1), timestamp: v.number() })
 
 const getCode = async (/** @type {string} */ branch) => v.parse(
